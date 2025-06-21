@@ -1,0 +1,139 @@
+/*global $ */
+import axios from 'axios';
+
+
+var fetchData = {};
+let genomeData;
+let chromosomes;
+let subGenomes;
+console.log("POPOPO")
+
+fetchData.getAndProcessFile = function (filepath, fileType) {
+    return new Promise((resolve, reject) => {
+        // get the file
+        axios.get(filepath, { headers: { 'content-encoding': 'gzip' } })
+            // process the file based on its type 
+            .then((response) => { return processFile(response.data, fileType) })
+            .then((data) => { resolve(data) })
+            // if there is an error  reject the promise and let user know through toast
+            .catch((err) => {
+                alert("Failed to fetch and parse the " + fileType + ' file', "ERROR");
+                reject();
+            })
+    });
+}
+
+fetchData.getFile = function (filepath) {
+    return new Promise((resolve, reject) => {
+        // get the file
+        axios.get(filepath, { headers: { 'content-encoding': 'gzip' } })
+            .then((response) => { resolve(response.data) })
+            // if there is an error  reject the promise and let user know through toast
+            .catch((err) => {
+                alert("Failed to fetch the file", "ERROR");
+                reject();
+            })
+    });
+}
+
+
+
+function processFile(rawData, typeOfFile) {
+    return new Promise((resolve, reject) => {
+        var instance;
+        switch (typeOfFile) {
+            case 'triad':
+                instance = triadWorker();
+                break;
+        }
+        instance.process(rawData).catch(() => {
+            alert("Error in parsing the " + typeOfFile + " file");
+            reject();
+            instance.terminate();
+        }).then(data => {
+            resolve(data);
+            instance.terminate();
+        })
+    })
+}
+
+sourceID = "AT_camelina";
+
+let geneSource = sourceID.split("_")[0] + "_genes.gff",
+            expressionFileSource = sourceID.split("_")[1] + ".txt";
+
+let geneData = [];
+
+
+getFile('data/' + geneSource)
+.then((geneFile) => {
+    console.log("Here")
+
+    let lineData = geneFile.split('\n').slice(1).map((d) => d.split('\t'));
+
+    geneData = _.groupBy(_.map(lineData, (d) => {
+        let coords = _.sortBy([+d[2], +d[3]]);
+        return {
+            'Chromosome': d[0],
+            'gene': d[1],
+            'start': coords[0],
+            'end': coords[1]
+        };
+        // group the array by Chromosome
+    }), (e) => e.Chromosome);
+    return getFile('data/' + expressionFileSource);
+})
+.then((rawData) => {
+    // processing the data
+    let lineArray = rawData.split("\n");
+    let columns = lineArray.slice(0, 1)[0].trim().split('\t'),
+        records = lineArray.slice(1)
+            .map((d) => {
+                let lineData = d.split('\t'), tempStore = {};
+                columns.map((columnName, columnIndex) => {
+                    // typecast to number 
+                    tempStore[columnName] = columnIndex == 0 ? lineData[columnIndex] : +lineData[columnIndex];
+                })
+                // TODO deal with +10 chromosomes
+                tempStore['activeChromosome'] = lineData[0].slice(0, 3);
+                return tempStore;
+            });
+
+    // actions.setActiveSubGenome("N/A");
+    activeSubGenome = "N/A";
+
+     genomeData = _.groupBy(records, (d) => d.activeChromosome);
+    let originalGenomeData = _.cloneDeep(genomeData);
+
+    // Get the chromosome names and put into array
+     chromosomes = _.sortBy(Object.keys(genomeData));
+
+    // Sort each array of chromosomes by the active subGenome
+    _.map(chromosomes, (chromosome) => {
+        genomeData[chromosome] = _.sortBy(genomeData[chromosome], (d) => d[activeSubGenome])
+    })
+
+    // sort the data by the default set sort key
+    let chromosomeData = _.sortBy(genomeData[activeChromosome], (d) => d[activeSubGenome]);
+    let originalChromosomeData = _.cloneDeep(chromosomeData);
+
+    subGenomes = [...columns.slice(1)]
+
+    // Dumping original data to window so that it can be used later on
+    window.triadBrowserStore = { 'chromosomeData': originalChromosomeData, 'genomeData': originalGenomeData };
+
+
+
+    // Set the data onto the state
+    // this.setState({ subGenomes, chromosomes });
+
+
+    
+
+})
+
+module.exports = fetchData;
+
+
+
+

@@ -1,0 +1,157 @@
+
+/** @jsxImportSource @emotion/react */
+import {
+    selectDraggables,
+    addDraggable,
+    deleteAllDraggables,
+    selectGroup,
+    setDraggables,
+    sortDraggables,
+} from 'redux/slices/draggableSlice';
+import React from 'react';
+import { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+    addGenome,
+    deleteAllGenome,
+    selectGenome,
+} from 'redux/slices/genomeSlice';
+import _ from 'lodash';
+import { scaleOrdinal } from 'd3-scale';
+import { css } from '@emotion/react';
+import DragContainer from 'features/draggable/DragContainer';
+import Draggable from 'features/draggable/Draggable';
+import {
+    addBasicTrack,
+    selectBasicTracks,
+    deleteAllBasicTracks,
+    updateTrack,
+    updateBothTracks,
+    initializeBasicTracks,
+} from 'redux/slices/basicTrackSlice';
+import { Typography, Slider, Tooltip } from '@mui/material';
+import { CustomDragLayer } from 'features/draggable/CustomDragLayer';
+import TrackListener from 'components/tracks/TrackListener';
+import OrthologLinks from '../components/tracks/OrthologLinks';
+import {
+    moveCollabPreview,
+    changePreviewVisibility,
+} from '../features/miniview/miniviewSlice';
+import SVTrack from '../components/tracks/SVTrack';
+import { selectMiniviews } from '../features/miniview/miniviewSlice';
+import TrackContainer from 'components/tracks/TrackContainer';
+import IndexBased from 'components/tracks/IndexBased';
+import {
+    Switch,
+    Button,
+    Stack,
+    Divider,
+    FormControl,
+    FormControlLabel,
+    Drawer,
+} from '@mui/material';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
+import sendFileToWorkers from '../utils/sendFileToWorkers';
+import {
+    addAnnotation,
+    clearSearches,
+    addSearch,
+    removeAnnotation,
+} from 'redux/slices/annotationSlice';
+import Autocomplete from '@mui/material/Autocomplete';
+import TextField from '@mui/material/TextField';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import Track from 'components/tracks/Track';
+
+import { text, json } from 'd3-fetch';
+import StackedProcessor from 'features/parsers/stackedProcessoor';
+
+function RenderTest({ isDark }) {
+
+    const [firstLoadx, setFirstLoadx] = useState(true)
+    
+    let styling = css(css`
+        :root {
+            --placeholder-primary: #eeeeee;
+            --placeholder-secondary: #cccccc;
+        }
+        @keyframes placeholder {
+            0% {
+                background-color: var(--placeholder-primary);
+            }
+            50% {
+                background-color: var(--placeholder-secondary);
+            }
+            100% {
+                background-color: var(--placeholder-primary);
+            }
+        }
+        .ff {
+         top: 0px;
+         left: 0px;
+         position: absolute;
+         z-index: 99999;
+}
+    `);
+
+
+    if(firstLoadx){
+	console.log("fetching")
+	fetch("http://localhost:3000/#/demo")
+	    .then(response => response.text())
+	    .then(html => {
+		console.log(html)
+
+		const container = document.getElementById('container');
+		const temp = document.createElement('div')
+		temp.innerHTML = html;
+
+		Array.from(temp.childNodes).forEach(node => {
+		    if (node.tagName === 'SCRIPT') {
+			const script = document.createElement('script');
+			if (node.src) {
+			    script.src = node.src
+			} else{
+			    script.textContent = node.textContent
+			}
+			document.body.appendChild(script);
+		    } else
+		    {
+			container.appendChild(node);
+		    }
+		})
+		console.log("inserted");
+	    })
+		
+	    .catch(error => {
+		console.log('Error fetching HTML:', error)
+	    })
+        setFirstLoadx(false);
+    }
+    
+    document.addEventListener("readystatechange", (e)=> {
+	console.log(document.readyState)
+	console.log("FF down: " + Date.now())
+	// document.getElementById("gtVerticalReference").remove()
+	// setTimeout(() => {
+	// }, 500)
+    })
+
+    function flagTime(e) {
+	console.log("FF up: " + Date.now())
+    }
+
+    const test_width = 1000
+    const test_height = 1000
+    
+    return (
+        <div id="container" css={styling}>
+            {firstLoadx ? (
+		<img className="ff" src={`files/arabidopsis_${test_width}x${test_height}.webp`} onLoad={flagTime}></img>
+            ) : (<></>)}
+        </div>
+    );
+}
+
+export default RenderTest;

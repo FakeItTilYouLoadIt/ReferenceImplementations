@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Syntactic False Front",
+  "version": "0.1",
+  "description": "Provide false fronts",
+    "permissions": [
+	"storage",
+	"http://localhost*"
+    ],
+  "content_scripts": [
+    {
+      "js": ["scripts/bundle.js"],
+      "matches": [
+        "https://canvas.usask.ca/*"
+      ],
+	"run_at": "document_start"
+    }
+  ]
+}
